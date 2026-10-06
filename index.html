@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Private Vault</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="app">
+    <section id="loginScreen" class="login-screen">
+      <div class="login-card">
+        <div class="logo">🔐</div>
+        <h1>Private Vault</h1>
+        <p>Shaxsiy ma'lumotlaringiz</p>
+        <input id="loginPassword" type="password" placeholder="Parol">
+        <button id="loginBtn">Kirish</button>
+        <div id="loginError" class="error"></div>
+      </div>
+    </section>
+
+    <section id="vaultScreen" class="hidden">
+      <header class="topbar">
+        <div>
+          <h1>Private Vault</h1>
+          <span>Shaxsiy ma'lumotlar</span>
+        </div>
+        <div class="actions">
+          <button id="settingsBtn" class="secondary">⚙️</button>
+          <button id="logoutBtn" class="secondary">Chiqish</button>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <input id="search" placeholder="Qidirish...">
+        <div class="tabs">
+          <button class="tab active" data-tab="logins">Loginlar</button>
+          <button class="tab" data-tab="phones">Raqamlar</button>
+        </div>
+        <button id="addBtn">＋ Qo'shish</button>
+      </div>
+
+      <div id="content"></div>
+    </section>
+  </main>
+
+  <div id="addModal" class="modal hidden">
+    <div class="modal-card">
+      <button class="close" data-close="addModal">×</button>
+      <h2 id="modalTitle">Qo'shish</h2>
+      <div id="loginFields">
+        <input id="titleInput" placeholder="Nomi: Instagram, TikTok...">
+        <input id="usernameInput" placeholder="Login / username">
+        <input id="passwordInput" type="password" placeholder="Parol">
+      </div>
+      <div id="phoneFields" class="hidden">
+        <input id="phoneInput" placeholder="+7 7XX XXX XX XX">
+        <input id="phoneNameInput" placeholder="Izoh: Activ, asosiy raqam...">
+      </div>
+      <button id="saveBtn">Saqlash</button>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-card">
+      <button class="close" data-close="settingsModal">×</button>
+      <h2>Sozlamalar</h2>
+      <input id="oldPassword" type="password" placeholder="Eski parol">
+      <input id="newPassword" type="password" placeholder="Yangi parol">
+      <button id="changePasswordBtn">Parolni o'zgartirish</button>
+      <div id="settingsMessage" class="message"></div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
