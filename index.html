@@ -1,77 +1,175 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow,noarchive">
   <title>Private Vault</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <main class="app">
-    <section id="loginScreen" class="login-screen">
-      <div class="login-card">
-        <div class="logo">🔐</div>
+
+  <!-- LOGIN -->
+  <div id="loginPage" class="login-page">
+    <div class="login-box">
+      <div class="lock">🔐</div>
+      <h1>Private Vault</h1>
+      <p>Shaxsiy ma'lumotlar</p>
+
+      <input
+        id="loginPassword"
+        type="password"
+        placeholder="Parol"
+      >
+
+      <button id="loginBtn">Kirish</button>
+
+      <div id="loginError"></div>
+    </div>
+  </div>
+
+
+  <!-- VAULT -->
+  <div id="vaultPage" class="hidden">
+
+    <header>
+      <div>
         <h1>Private Vault</h1>
-        <p>Shaxsiy ma'lumotlaringiz</p>
-        <input id="loginPassword" type="password" placeholder="Parol">
-        <button id="loginBtn">Kirish</button>
-        <div id="loginError" class="error"></div>
-      </div>
-    </section>
-
-    <section id="vaultScreen" class="hidden">
-      <header class="topbar">
-        <div>
-          <h1>Private Vault</h1>
-          <span>Shaxsiy ma'lumotlar</span>
-        </div>
-        <div class="actions">
-          <button id="settingsBtn" class="secondary">⚙️</button>
-          <button id="logoutBtn" class="secondary">Chiqish</button>
-        </div>
-      </header>
-
-      <div class="toolbar">
-        <input id="search" placeholder="Qidirish...">
-        <div class="tabs">
-          <button class="tab active" data-tab="logins">Loginlar</button>
-          <button class="tab" data-tab="phones">Raqamlar</button>
-        </div>
-        <button id="addBtn">＋ Qo'shish</button>
+        <span>Shaxsiy ma'lumotlar</span>
       </div>
 
-      <div id="content"></div>
-    </section>
-  </main>
+      <div>
+        <button class="light" id="settingsBtn">⚙️</button>
+        <button class="light" id="logoutBtn">Chiqish</button>
+      </div>
+    </header>
 
+
+    <div class="toolbar">
+
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="Qidirish..."
+      >
+
+      <div class="tabs">
+        <button class="tab active" data-tab="logins">
+          Loginlar
+        </button>
+
+        <button class="tab" data-tab="phones">
+          Raqamlar
+        </button>
+      </div>
+
+      <button id="addBtn">＋ Qo‘shish</button>
+
+    </div>
+
+
+    <section id="list"></section>
+
+  </div>
+
+
+  <!-- ADD MODAL -->
   <div id="addModal" class="modal hidden">
-    <div class="modal-card">
+
+    <div class="modal-box">
+
       <button class="close" data-close="addModal">×</button>
-      <h2 id="modalTitle">Qo'shish</h2>
-      <div id="loginFields">
-        <input id="titleInput" placeholder="Nomi: Instagram, TikTok...">
-        <input id="usernameInput" placeholder="Login / username">
-        <input id="passwordInput" type="password" placeholder="Parol">
+
+      <h2 id="formTitle">Login qo‘shish</h2>
+
+
+      <div id="loginForm">
+
+        <input
+          id="serviceInput"
+          placeholder="Nomi: Instagram, Telegram..."
+        >
+
+        <input
+          id="usernameInput"
+          placeholder="Login / username"
+        >
+
+        <input
+          id="passwordInput"
+          type="password"
+          placeholder="Parol"
+        >
+
       </div>
-      <div id="phoneFields" class="hidden">
-        <input id="phoneInput" placeholder="+7 7XX XXX XX XX">
-        <input id="phoneNameInput" placeholder="Izoh: Activ, asosiy raqam...">
+
+
+      <div id="phoneForm" class="hidden">
+
+        <input
+          id="phoneInput"
+          placeholder="+7 700 000 00 00"
+        >
+
+        <input
+          id="phoneNameInput"
+          placeholder="Izoh: Activ, asosiy raqam..."
+        >
+
       </div>
+
+
       <button id="saveBtn">Saqlash</button>
+
     </div>
+
   </div>
 
+
+  <!-- SETTINGS -->
   <div id="settingsModal" class="modal hidden">
-    <div class="modal-card">
+
+    <div class="modal-box">
+
       <button class="close" data-close="settingsModal">×</button>
+
       <h2>Sozlamalar</h2>
-      <input id="oldPassword" type="password" placeholder="Eski parol">
-      <input id="newPassword" type="password" placeholder="Yangi parol">
-      <button id="changePasswordBtn">Parolni o'zgartirish</button>
-      <div id="settingsMessage" class="message"></div>
+
+      <p class="muted">
+        Sayt parolini shu yerda o‘zgartirasiz.
+      </p>
+
+      <input
+        id="oldPasswordInput"
+        type="password"
+        placeholder="Eski parol"
+      >
+
+      <input
+        id="newPasswordInput"
+        type="password"
+        placeholder="Yangi parol"
+      >
+
+      <input
+        id="newPassword2Input"
+        type="password"
+        placeholder="Yangi parolni takrorlang"
+      >
+
+      <button id="changePasswordBtn">
+        Parolni o‘zgartirish
+      </button>
+
+      <div id="settingsMessage"></div>
+
     </div>
+
   </div>
 
-  <script src="/app.js"></script>
+
+  <script src="app.js"></script>
+
 </body>
 </html>
