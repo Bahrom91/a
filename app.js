@@ -1,245 +1,801 @@
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 
-let vault = { logins: [], phones: [] };
+
+/* BOSHLANG'ICH PAROL */
+const DEFAULT_PASSWORD = "B2008U2011";
+
+
+/* MA'LUMOTLAR */
+const DATA_KEY = "private_vault_data";
+const PASSWORD_KEY = "private_vault_password";
+
+
 let currentTab = "logins";
-let editIndex = null;
+let editIndex = -1;
 
-async function api(url, options = {}) {
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || "Xatolik");
-  return data;
-}
+let vault = loadVault();
 
-async function start() {
+
+function loadVault() {
+
   try {
-    const s = await api("/api/session");
-    if (s.authenticated) {
-      await openVault();
-    } else {
-      showLogin();
+
+    const data = JSON.parse(
+      localStorage.getItem(DATA_KEY)
+    );
+
+    if (
+      data &&
+      Array.isArray(data.logins) &&
+      Array.isArray(data.phones)
+    ) {
+      return data;
     }
-  } catch {
-    showLogin();
-  }
-}
 
-function showLogin() {
-  $("loginScreen").classList.remove("hidden");
-  $("vaultScreen").classList.add("hidden");
-}
+  } catch {}
 
-async function openVault() {
-  vault = await api("/api/vault");
-  $("loginScreen").classList.add("hidden");
-  $("vaultScreen").classList.remove("hidden");
-  render();
-}
-
-$("loginBtn").onclick = async () => {
-  $("loginError").textContent = "";
-  try {
-    await api("/api/login", {
-      method: "POST",
-      body: JSON.stringify({ password: $("loginPassword").value })
-    });
-    $("loginPassword").value = "";
-    await openVault();
-  } catch (e) {
-    $("loginError").textContent = e.message;
-  }
-};
-
-$("loginPassword").addEventListener("keydown", e => {
-  if (e.key === "Enter") $("loginBtn").click();
-});
-
-$("logoutBtn").onclick = async () => {
-  await api("/api/logout", { method: "POST" });
-  showLogin();
-};
-
-document.querySelectorAll(".tab").forEach(btn => {
-  btn.onclick = () => {
-    currentTab = btn.dataset.tab;
-    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-    btn.classList.add("active");
-    render();
+  return {
+    logins: [],
+    phones: []
   };
-});
-
-$("search").oninput = render;
-
-$("addBtn").onclick = () => {
-  editIndex = null;
-  $("modalTitle").textContent = currentTab === "logins" ? "Login qo'shish" : "Raqam qo'shish";
-  $("loginFields").classList.toggle("hidden", currentTab !== "logins");
-  $("phoneFields").classList.toggle("hidden", currentTab !== "phones");
-  clearForm();
-  $("addModal").classList.remove("hidden");
-};
-
-$("saveBtn").onclick = async () => {
-  const arr = vault[currentTab];
-
-  if (currentTab === "logins") {
-    const item = {
-      title: $("titleInput").value.trim(),
-      username: $("usernameInput").value.trim(),
-      password: $("passwordInput").value
-    };
-    if (!item.title || !item.username || !item.password) return alert("Barcha joyni to'ldiring.");
-    if (editIndex === null) arr.push(item);
-    else arr[editIndex] = item;
-  } else {
-    const item = {
-      phone: $("phoneInput").value.trim(),
-      name: $("phoneNameInput").value.trim()
-    };
-    if (!item.phone) return alert("Raqamni kiriting.");
-    if (editIndex === null) arr.push(item);
-    else arr[editIndex] = item;
-  }
-
-  await saveVault();
-  $("addModal").classList.add("hidden");
-  render();
-};
-
-async function saveVault() {
-  await api("/api/vault", {
-    method: "PUT",
-    body: JSON.stringify(vault)
-  });
 }
 
-function clearForm() {
-  ["titleInput","usernameInput","passwordInput","phoneInput","phoneNameInput"]
-    .forEach(id => $(id).value = "");
-}
 
-function render() {
-  const q = $("search").value.toLowerCase().trim();
-  const arr = vault[currentTab] || [];
+function saveVault() {
 
-  const filtered = arr.map((item, index) => ({ item, index })).filter(({ item }) =>
-    JSON.stringify(item).toLowerCase().includes(q)
+  localStorage.setItem(
+    DATA_KEY,
+    JSON.stringify(vault)
   );
 
+}
+
+
+/* PASSWORD HASH */
+
+async function hashPassword(password) {
+
+  const data =
+    new TextEncoder().encode(password);
+
+  const hash =
+    await crypto.subtle.digest(
+      "SHA-256",
+      data
+    );
+
+  return [...new Uint8Array(hash)]
+    .map(x =>
+      x.toString(16).padStart(2, "0")
+    )
+    .join("");
+}
+
+
+async function getPasswordHash() {
+
+  let hash =
+    localStorage.getItem(PASSWORD_KEY);
+
+  if (!hash) {
+
+    hash =
+      await hashPassword(DEFAULT_PASSWORD);
+
+    localStorage.setItem(
+      PASSWORD_KEY,
+      hash
+    );
+  }
+
+  return hash;
+}
+
+
+/* LOGIN */
+
+document
+  .getElementById("loginBtn")
+  .onclick = async function () {
+
+    const password =
+      $("loginPassword").value;
+
+    const enteredHash =
+      await hashPassword(password);
+
+    const realHash =
+      await getPasswordHash();
+
+    if (enteredHash !== realHash) {
+
+      $("loginError").textContent =
+        "Parol noto‘g‘ri";
+
+      return;
+    }
+
+    sessionStorage.setItem(
+      "vault_logged_in",
+      "1"
+    );
+
+    $("loginPassword").value = "";
+
+    $("loginError").textContent = "";
+
+    showVault();
+
+  };
+
+
+$("loginPassword").onkeydown =
+  function (event) {
+
+    if (event.key === "Enter") {
+      $("loginBtn").click();
+    }
+
+  };
+
+
+function showVault() {
+
+  $("loginPage").classList.add("hidden");
+
+  $("vaultPage").classList.remove("hidden");
+
+  render();
+
+}
+
+
+function showLogin() {
+
+  $("vaultPage").classList.add("hidden");
+
+  $("loginPage").classList.remove("hidden");
+
+}
+
+
+/* LOGOUT */
+
+$("logoutBtn").onclick = function () {
+
+  sessionStorage.removeItem(
+    "vault_logged_in"
+  );
+
+  showLogin();
+
+};
+
+
+/* TABS */
+
+document
+  .querySelectorAll(".tab")
+  .forEach(button => {
+
+    button.onclick = function () {
+
+      currentTab =
+        button.dataset.tab;
+
+      document
+        .querySelectorAll(".tab")
+        .forEach(x =>
+          x.classList.remove("active")
+        );
+
+      button.classList.add("active");
+
+      render();
+
+    };
+
+  });
+
+
+/* SEARCH */
+
+$("searchInput").oninput = render;
+
+
+/* ADD */
+
+$("addBtn").onclick = function () {
+
+  editIndex = -1;
+
+  $("formTitle").textContent =
+    currentTab === "logins"
+      ? "Login qo‘shish"
+      : "Raqam qo‘shish";
+
+  $("loginForm")
+    .classList
+    .toggle(
+      "hidden",
+      currentTab !== "logins"
+    );
+
+  $("phoneForm")
+    .classList
+    .toggle(
+      "hidden",
+      currentTab !== "phones"
+    );
+
+  clearForm();
+
+  $("addModal")
+    .classList
+    .remove("hidden");
+
+};
+
+
+/* SAVE */
+
+$("saveBtn").onclick = function () {
+
+  if (currentTab === "logins") {
+
+    const item = {
+
+      service:
+        $("serviceInput").value.trim(),
+
+      username:
+        $("usernameInput").value.trim(),
+
+      password:
+        $("passwordInput").value
+
+    };
+
+    if (
+      !item.service ||
+      !item.username ||
+      !item.password
+    ) {
+
+      alert("Barcha joyni to‘ldiring.");
+
+      return;
+    }
+
+
+    if (editIndex === -1) {
+
+      vault.logins.push(item);
+
+    } else {
+
+      vault.logins[editIndex] = item;
+
+    }
+
+  }
+
+
+  else {
+
+    const item = {
+
+      phone:
+        $("phoneInput").value.trim(),
+
+      name:
+        $("phoneNameInput").value.trim()
+
+    };
+
+
+    if (!item.phone) {
+
+      alert("Raqamni kiriting.");
+
+      return;
+    }
+
+
+    if (editIndex === -1) {
+
+      vault.phones.push(item);
+
+    } else {
+
+      vault.phones[editIndex] = item;
+
+    }
+
+  }
+
+
+  saveVault();
+
+  $("addModal")
+    .classList
+    .add("hidden");
+
+  render();
+
+};
+
+
+function clearForm() {
+
+  [
+    "serviceInput",
+    "usernameInput",
+    "passwordInput",
+    "phoneInput",
+    "phoneNameInput"
+  ]
+  .forEach(id => {
+
+    $(id).value = "";
+
+  });
+
+}
+
+
+/* RENDER */
+
+function render() {
+
+  const search =
+    $("searchInput")
+      .value
+      .toLowerCase()
+      .trim();
+
+  const array =
+    vault[currentTab];
+
+  const filtered =
+    array
+      .map((item, index) => ({
+        item,
+        index
+      }))
+      .filter(x =>
+        JSON.stringify(x.item)
+          .toLowerCase()
+          .includes(search)
+      );
+
+
   if (!filtered.length) {
-    $("content").innerHTML = `<div class="empty">Hozircha ma'lumot yo'q</div>`;
+
+    $("list").innerHTML =
+      '<div class="empty">Hozircha ma’lumot yo‘q</div>';
+
     return;
   }
 
-  $("content").innerHTML = filtered.map(({ item, index }) => {
-    if (currentTab === "phones") {
+
+  $("list").innerHTML =
+    filtered.map(({ item, index }) => {
+
+      if (currentTab === "phones") {
+
+        return `
+
+          <div class="card">
+
+            <div>
+
+              <h3>
+                ${escapeHTML(
+                  item.name ||
+                  "Telefon raqami"
+                )}
+              </h3>
+
+              <div class="sub">
+                ${escapeHTML(item.phone)}
+              </div>
+
+            </div>
+
+
+            <div class="card-actions">
+
+              <button
+                class="small"
+                onclick="copyText('${safe(item.phone)}')"
+              >
+                Nusxalash
+              </button>
+
+              <button
+                class="small"
+                onclick="editItem(${index})"
+              >
+                O‘zgartirish
+              </button>
+
+              <button
+                class="small danger"
+                onclick="deleteItem(${index})"
+              >
+                O‘chirish
+              </button>
+
+            </div>
+
+          </div>
+
+        `;
+
+      }
+
+
       return `
+
         <div class="card">
+
           <div>
-            <h3>${esc(item.name || "Telefon raqami")}</h3>
-            <div class="muted">${esc(item.phone)}</div>
+
+            <h3>
+              ${escapeHTML(item.service)}
+            </h3>
+
+            <div class="sub">
+              ${escapeHTML(item.username)}
+            </div>
+
+            <div
+              class="password"
+              id="password-${index}"
+            >
+              ••••••••
+            </div>
+
           </div>
+
+
           <div class="card-actions">
-            <button class="small" onclick="copyText(${JSON.stringify(item.phone)})">Nusxalash</button>
-            <button class="small" onclick="editItem(${index})">O'zgartirish</button>
-            <button class="small danger" onclick="deleteItem(${index})">O'chirish</button>
+
+            <button
+              class="small"
+              onclick="togglePassword(
+                ${index},
+                this
+              )"
+            >
+              Ko‘rsatish
+            </button>
+
+
+            <button
+              class="small"
+              onclick="copyText(
+                '${safe(item.password)}'
+              )"
+            >
+              Parolni nusxalash
+            </button>
+
+
+            <button
+              class="small"
+              onclick="editItem(${index})"
+            >
+              O‘zgartirish
+            </button>
+
+
+            <button
+              class="small danger"
+              onclick="deleteItem(${index})"
+            >
+              O‘chirish
+            </button>
+
           </div>
-        </div>`;
+
+        </div>
+
+      `;
+
+    }).join("");
+
+}
+
+
+/* PASSWORD SHOW/HIDE */
+
+window.togglePassword =
+  function (index, button) {
+
+    const element =
+      $("password-" + index);
+
+    if (
+      element.textContent ===
+      "••••••••"
+    ) {
+
+      element.textContent =
+        vault.logins[index].password;
+
+      button.textContent =
+        "Yashirish";
+
     }
 
-    return `
-      <div class="card">
-        <div>
-          <h3>${esc(item.title)}</h3>
-          <div class="muted">${esc(item.username)}</div>
-          <div class="password" id="pw-${index}">••••••••</div>
-        </div>
-        <div class="card-actions">
-          <button class="small" onclick="togglePassword(${index})">Ko'rsatish</button>
-          <button class="small" onclick="copyText(${JSON.stringify(item.password)})">Parolni nusxalash</button>
-          <button class="small" onclick="editItem(${index})">O'zgartirish</button>
-          <button class="small danger" onclick="deleteItem(${index})">O'chirish</button>
-        </div>
-      </div>`;
-  }).join("");
+    else {
+
+      element.textContent =
+        "••••••••";
+
+      button.textContent =
+        "Ko‘rsatish";
+
+    }
+
+  };
+
+
+/* COPY */
+
+window.copyText =
+  async function (text) {
+
+    try {
+
+      await navigator.clipboard
+        .writeText(text);
+
+      alert("Nusxalandi");
+
+    } catch {
+
+      alert("Nusxalash ishlamadi");
+
+    }
+
+  };
+
+
+/* EDIT */
+
+window.editItem =
+  function (index) {
+
+    editIndex = index;
+
+    const item =
+      vault[currentTab][index];
+
+
+    $("formTitle").textContent =
+      currentTab === "logins"
+        ? "Loginni o‘zgartirish"
+        : "Raqamni o‘zgartirish";
+
+
+    $("loginForm")
+      .classList
+      .toggle(
+        "hidden",
+        currentTab !== "logins"
+      );
+
+
+    $("phoneForm")
+      .classList
+      .toggle(
+        "hidden",
+        currentTab !== "phones"
+      );
+
+
+    if (currentTab === "logins") {
+
+      $("serviceInput").value =
+        item.service || "";
+
+      $("usernameInput").value =
+        item.username || "";
+
+      $("passwordInput").value =
+        item.password || "";
+
+    }
+
+    else {
+
+      $("phoneInput").value =
+        item.phone || "";
+
+      $("phoneNameInput").value =
+        item.name || "";
+
+    }
+
+
+    $("addModal")
+      .classList
+      .remove("hidden");
+
+  };
+
+
+/* DELETE */
+
+window.deleteItem =
+  function (index) {
+
+    if (
+      !confirm("O‘chirilsinmi?")
+    ) return;
+
+
+    vault[currentTab]
+      .splice(index, 1);
+
+    saveVault();
+
+    render();
+
+  };
+
+
+/* SETTINGS */
+
+$("settingsBtn").onclick =
+  function () {
+
+    $("oldPasswordInput").value = "";
+    $("newPasswordInput").value = "";
+    $("newPassword2Input").value = "";
+
+    $("settingsMessage").textContent = "";
+
+    $("settingsModal")
+      .classList
+      .remove("hidden");
+
+  };
+
+
+/* CHANGE PASSWORD */
+
+$("changePasswordBtn").onclick =
+  async function () {
+
+    const oldPassword =
+      $("oldPasswordInput").value;
+
+    const newPassword =
+      $("newPasswordInput").value;
+
+    const repeatPassword =
+      $("newPassword2Input").value;
+
+
+    if (newPassword.length < 6) {
+
+      $("settingsMessage").textContent =
+        "Yangi parol kamida 6 ta belgi bo‘lsin.";
+
+      return;
+
+    }
+
+
+    if (
+      newPassword !== repeatPassword
+    ) {
+
+      $("settingsMessage").textContent =
+        "Yangi parollar bir xil emas.";
+
+      return;
+
+    }
+
+
+    const oldHash =
+      await hashPassword(oldPassword);
+
+    const realHash =
+      await getPasswordHash();
+
+
+    if (oldHash !== realHash) {
+
+      $("settingsMessage").textContent =
+        "Eski parol noto‘g‘ri.";
+
+      return;
+
+    }
+
+
+    const newHash =
+      await hashPassword(newPassword);
+
+
+    localStorage.setItem(
+      PASSWORD_KEY,
+      newHash
+    );
+
+
+    $("settingsMessage").textContent =
+      "Parol muvaffaqiyatli o‘zgartirildi.";
+
+  };
+
+
+/* CLOSE */
+
+document
+  .querySelectorAll("[data-close]")
+  .forEach(button => {
+
+    button.onclick = function () {
+
+      $(button.dataset.close)
+        .classList
+        .add("hidden");
+
+    };
+
+  });
+
+
+/* HTML XAVFSIZLIGI */
+
+function escapeHTML(value) {
+
+  return String(value ?? "")
+    .replace(/[&<>"']/g, char => ({
+
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+
+    }[char]));
+
 }
 
-function togglePassword(index) {
-  const el = $(`pw-${index}`);
-  if (el.textContent === "••••••••") {
-    el.textContent = vault.logins[index].password;
-  } else {
-    el.textContent = "••••••••";
-  }
+
+function safe(value) {
+
+  return String(value ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, "\\n");
+
 }
 
-window.copyText = async (text) => {
-  await navigator.clipboard.writeText(text);
-  alert("Nusxalandi");
-};
 
-window.editItem = (index) => {
-  editIndex = index;
-  const item = vault[currentTab][index];
+/* START */
 
-  $("modalTitle").textContent = currentTab === "logins" ? "Loginni o'zgartirish" : "Raqamni o'zgartirish";
-  $("loginFields").classList.toggle("hidden", currentTab !== "logins");
-  $("phoneFields").classList.toggle("hidden", currentTab !== "phones");
+if (
+  sessionStorage.getItem(
+    "vault_logged_in"
+  ) === "1"
+) {
 
-  if (currentTab === "logins") {
-    $("titleInput").value = item.title || "";
-    $("usernameInput").value = item.username || "";
-    $("passwordInput").value = item.password || "";
-  } else {
-    $("phoneInput").value = item.phone || "";
-    $("phoneNameInput").value = item.name || "";
-  }
+  showVault();
 
-  $("addModal").classList.remove("hidden");
-};
+} else {
 
-window.deleteItem = async (index) => {
-  if (!confirm("O'chirilsinmi?")) return;
-  vault[currentTab].splice(index, 1);
-  await saveVault();
-  render();
-};
+  showLogin();
 
-$("settingsBtn").onclick = () => {
-  $("settingsMessage").textContent = "";
-  $("oldPassword").value = "";
-  $("newPassword").value = "";
-  $("settingsModal").classList.remove("hidden");
-};
-
-$("changePasswordBtn").onclick = async () => {
-  try {
-    await api("/api/change-password", {
-      method: "POST",
-      body: JSON.stringify({
-        oldPassword: $("oldPassword").value,
-        newPassword: $("newPassword").value
-      })
-    });
-    $("settingsMessage").textContent = "Parol muvaffaqiyatli o'zgartirildi.";
-    $("oldPassword").value = "";
-    $("newPassword").value = "";
-  } catch (e) {
-    $("settingsMessage").textContent = e.message;
-  }
-};
-
-document.querySelectorAll("[data-close]").forEach(btn => {
-  btn.onclick = () => $(btn.dataset.close).classList.add("hidden");
-});
-
-function esc(value) {
-  return String(value ?? "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
-  }[c]));
 }
 
-start();
+
+getPasswordHash();
